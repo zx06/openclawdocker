@@ -61,6 +61,8 @@ docker run -d \
 docker compose run --rm openclaw-cli onboard
 ```
 
+> 说明：若未先完成 `onboard`，直接启动 `openclaw gateway` 可能提示缺少配置并退出。
+
 ## 访问
 
 | 服务 | 地址 |
