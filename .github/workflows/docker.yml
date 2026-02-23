@@ -2,11 +2,11 @@ name: Build and Push Docker Image
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每日 00:00 UTC（兜底构建）
+    - cron: "0 0 * * *" # 每日 00:00 UTC（兜底构建）
   workflow_dispatch:
     inputs:
       push_image:
-        description: '推送镜像到 Registry'
+        description: "推送镜像到 Registry"
         required: false
         default: true
         type: boolean
@@ -14,12 +14,17 @@ on:
     branches:
       - master
     paths:
-      - 'Dockerfile'
-      - '.github/workflows/docker.yml'
+      - "Dockerfile"
+      - ".github/workflows/docker.yml"
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -31,9 +36,6 @@ jobs:
       - name: Get current date
         id: date
         run: echo "date=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,12 +58,13 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
+            type=raw,value=${{ matrix.platform == 'linux/arm64' && 'arm64' || '' }},enable=${{ matrix.platform == 'linux/arm64' && is_default_branch }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -72,6 +75,7 @@ jobs:
         run: |
           echo "### 🦞 OpenClaw Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
