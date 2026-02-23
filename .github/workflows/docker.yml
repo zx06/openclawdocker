@@ -132,17 +132,19 @@ jobs:
 
       - name: Build summary (native)
         run: |
-          echo "### Native Build: ${{ matrix.variant }} / linux/${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Runner:** ${{ matrix.runner }}" >> $GITHUB_STEP_SUMMARY
-          echo "**GHCR Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**ACR Tag:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
+          GHCR_TAG="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}"
+          ACR_TAG="${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}"
+          STATUS_MSG="Built (not pushed)"
+          SIZE_MSG="N/A"
           if [ "${{ needs.prepare.outputs.should_push }}" = "true" ]; then
-            echo "**Image Size:** ${{ steps.native_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Native image pushed to GHCR and ACR" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "ℹ️ Native image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
+            STATUS_MSG="Pushed to GHCR + ACR"
+            SIZE_MSG="${{ steps.native_size.outputs.mb }} MB"
           fi
+          echo "### Native Build Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Variant | Arch | Runner | GHCR Tag | ACR Tag | Size | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|---|---:|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ matrix.variant }} | linux/${{ matrix.arch }} | \`${{ matrix.runner }}\` | \`${GHCR_TAG}\` | \`${ACR_TAG}\` | ${SIZE_MSG} | ${STATUS_MSG} |" >> $GITHUB_STEP_SUMMARY
 
   publish-manifest:
     needs: [prepare, build-native]
@@ -212,14 +214,16 @@ jobs:
 
       - name: Generate build summary (manifest)
         run: |
-          echo "### 🦞 ${{ matrix.label }} Multi-Arch Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Architectures:** linux/amd64, linux/arm64 (native runners, no QEMU)" >> $GITHUB_STEP_SUMMARY
-          echo "**GHCR Primary Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**ACR Primary Tag:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          GHCR_PRIMARY="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
+          ACR_PRIMARY="${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
+          GHCR_RELEASE="-"
+          ACR_RELEASE="-"
           if [ "${{ github.ref_name }}" = "master" ]; then
-            echo "**GHCR Release Tags:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**ACR Release Tags:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
+            GHCR_RELEASE="\`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`<br>\`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`"
+            ACR_RELEASE="\`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`<br>\`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`"
           fi
-          echo "ℹ️ Size details are listed in each native build job (amd64/arm64)." >> $GITHUB_STEP_SUMMARY
-          echo "✅ Multi-arch tags pushed to GHCR and ACR" >> $GITHUB_STEP_SUMMARY
+          echo "### Multi-Arch Manifest Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Architectures | GHCR Primary | ACR Primary | GHCR Release Tags | ACR Release Tags | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ matrix.label }} | linux/amd64, linux/arm64 | \`${GHCR_PRIMARY}\` | \`${ACR_PRIMARY}\` | ${GHCR_RELEASE} | ${ACR_RELEASE} | Pushed |" >> $GITHUB_STEP_SUMMARY
