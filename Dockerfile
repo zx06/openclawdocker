@@ -31,6 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libcairo2 \
     libasound2 \
+    libx11-6 \
+    libxext6 \
+    ffmpeg \
+    libopus0 \
     fonts-noto-cjk \
     fonts-wqy-zenhei \
     && rm -rf /var/lib/apt/lists/* \
