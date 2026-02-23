@@ -105,6 +105,20 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
 
+      - name: Compute native image size
+        id: native_size
+        if: needs.prepare.outputs.should_push == 'true'
+        run: |
+          IMAGE_REF="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}"
+          docker pull "$IMAGE_REF"
+          SIZE_BYTES="$(docker image inspect "$IMAGE_REF" --format '{{.Size}}')"
+          if [ -z "$SIZE_BYTES" ] || [ "$SIZE_BYTES" -le 0 ]; then
+            echo "mb=N/A" >> "$GITHUB_OUTPUT"
+          else
+            SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
+            echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build summary (native)
         run: |
           echo "### Native Build: ${{ matrix.variant }} / linux/${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
@@ -112,6 +126,7 @@ jobs:
           echo "**Runner:** ${{ matrix.runner }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.prepare.outputs.should_push }}" = "true" ]; then
+            echo "**Image Size:** ${{ steps.native_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
             echo "✅ Native image pushed" >> $GITHUB_STEP_SUMMARY
           else
             echo "ℹ️ Native image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
@@ -164,19 +179,6 @@ jobs:
 
           docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
 
-      - name: Compute manifest size
-        id: image_size
-        run: |
-          IMAGE_REF="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
-          SIZE_BYTES="$(docker buildx imagetools inspect "$IMAGE_REF" | awk '/^[[:space:]]*Size:/ {sum += $2} END {print sum+0}')"
-
-          if [ -z "$SIZE_BYTES" ] || [ "$SIZE_BYTES" -le 0 ]; then
-            echo "mb=N/A" >> "$GITHUB_OUTPUT"
-          else
-            SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
-            echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Generate build summary (manifest)
         run: |
           echo "### 🦞 ${{ matrix.label }} Multi-Arch Summary" >> $GITHUB_STEP_SUMMARY
@@ -186,5 +188,5 @@ jobs:
           if [ "${{ github.ref_name }}" = "master" ]; then
             echo "**Release Tags:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "**Approx Manifest Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ Size details are listed in each native build job (amd64/arm64)." >> $GITHUB_STEP_SUMMARY
           echo "✅ Multi-arch tags pushed" >> $GITHUB_STEP_SUMMARY
