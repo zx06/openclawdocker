@@ -1,0 +1,31 @@
+FROM node:24-bookworm
+
+LABEL org.opencontainers.image.source="https://github.com/zx06/openclaw-docker"
+LABEL org.opencontainers.image.description="Minimal OpenClaw Docker image with required runtime dependencies"
+LABEL org.opencontainers.image.licenses="MIT"
+
+ENV \
+    NODE_ENV=production \
+    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+    npm_config_registry=https://registry.npmmirror.com
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g openclaw@latest \
+    && npm install -g playwright \
+    && npx playwright install chromium --with-deps \
+    && chmod -R o+rx /home/node/.cache/ms-playwright
+
+RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
+    chown -R node:node /home/node/.openclaw /home/node/.cache
+
+USER node
+WORKDIR /home/node
+
+VOLUME ["/home/node/.openclaw"]
+
+EXPOSE 18789
+
+ENTRYPOINT ["openclaw", "gateway"]

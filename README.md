@@ -84,11 +84,20 @@ docker compose run --rm openclaw-cli onboard
 |------|------|
 | `latest` | 最新构建 |
 | `daily-YYYYMMDD` | 每日构建 |
+| `mini-latest` | 精简版（仅必要依赖） |
+| `mini-daily-YYYYMMDD` | 精简版每日构建 |
 
 ## 本地构建
 
 ```bash
 docker build -t ghcr.io/zx06/openclaw:local .
+docker build -f Dockerfile.mini -t ghcr.io/zx06/openclaw:mini-local .
+```
+
+## 使用 Mini 版本
+
+```bash
+docker pull ghcr.io/zx06/openclaw:mini-latest
 ```
 
 ## 故障排查

@@ -15,6 +15,7 @@ on:
       - master
     paths:
       - "Dockerfile"
+      - "Dockerfile.mini"
       - ".github/workflows/docker.yml"
 
 env:
@@ -81,4 +82,65 @@ jobs:
             echo "ℹ️ Image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
           else
             echo "✅ Image pushed to registry" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  build-and-push-mini:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (mini)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=mini-
+            type=raw,value=mini-latest,enable={{is_default_branch}}
+            type=raw,value=mini-daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
+
+      - name: Build and push Docker image (mini)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.mini
+          platforms: linux/amd64
+          push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=mini
+          cache-to: type=gha,mode=max,scope=mini
+
+      - name: Generate build summary (mini)
+        run: |
+          echo "### 🦞 OpenClaw Docker Mini Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
+            echo "ℹ️ Mini image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Mini image pushed to registry" >> $GITHUB_STEP_SUMMARY
           fi
