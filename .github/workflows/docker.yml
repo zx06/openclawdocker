@@ -141,9 +141,11 @@ jobs:
           - variant: full
             tag_prefix: ""
             label: OpenClaw
+            description: Pre-built OpenClaw Docker image with Playwright and Feishu support
           - variant: mini
             tag_prefix: mini-
             label: OpenClaw Mini
+            description: Minimal OpenClaw Docker image without Playwright and browser dependencies
 
     runs-on: ubuntu-latest
     permissions:
@@ -172,12 +174,17 @@ jobs:
             "-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
           )
 
+          ANNOTATION_ARGS=(
+            "--annotation" "index:org.opencontainers.image.description=${{ matrix.description }}"
+            "--annotation" "index:org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+          )
+
           if [ "${{ github.ref_name }}" = "master" ]; then
             TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest")
             TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}")
           fi
 
-          docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
+          docker buildx imagetools create "${ANNOTATION_ARGS[@]}" "${TAG_ARGS[@]}" "${SOURCES[@]}"
 
       - name: Generate build summary (manifest)
         run: |
