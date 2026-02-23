@@ -45,7 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g @iflow-ai/iflow-cli \
     && npm install -g opencode-ai \
     && npm install -g @github/copilot \
-    && npx playwright install chromium --with-deps
+    && npx playwright install chromium --with-deps \
+    && chmod -R o+rx /home/node/.cache/ms-playwright
 
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
     chown -R node:node /home/node/.openclaw /home/node/.cache
