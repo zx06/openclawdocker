@@ -42,6 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g openclaw@latest \
     && npm install -g playwright \
     && npm install -g @larksuiteoapi/node-sdk \
+    && npm install -g @iflow-ai/iflow-cli \
+    && npm install -g opencode-ai \
+    && npm install -g @github/copilot \
     && npx playwright install chromium --with-deps
 
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
