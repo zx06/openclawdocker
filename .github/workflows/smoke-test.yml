@@ -1,0 +1,63 @@
+name: Docker Smoke Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/smoke-test.yml"
+      - ".github/workflows/docker.yml"
+  push:
+    branches:
+      - master
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/smoke-test.yml"
+      - ".github/workflows/docker.yml"
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t openclaw:smoke .
+
+      - name: Start container
+        run: |
+          docker run -d --name openclaw-smoke -p 18789:18789 openclaw:smoke
+          docker ps --filter "name=openclaw-smoke"
+
+      - name: Verify required commands exist
+        run: |
+          docker exec openclaw-smoke openclaw --help
+          docker exec openclaw-smoke npx playwright --version
+
+      - name: Verify gateway process and health command
+        run: |
+          for i in {1..20}; do
+            if docker exec openclaw-smoke sh -lc "openclaw gateway health >/dev/null 2>&1 || openclaw gateway status >/dev/null 2>&1"; then
+              echo "Gateway health check passed"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Gateway health check did not pass in time"
+          docker logs openclaw-smoke
+          exit 1
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker logs openclaw-smoke || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f openclaw-smoke || true
+          docker rmi openclaw:smoke || true
