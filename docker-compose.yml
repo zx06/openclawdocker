@@ -3,15 +3,45 @@ services:
     image: ghcr.io/zx06/openclaw:latest
     container_name: openclaw
     restart: unless-stopped
+    stdin_open: true
+    tty: true
+    # Uncomment if running on Synology NAS or other systems with UID/GID issues
+    # user: "1000:1000"
     ports:
       - "18789:18789"
+      - "18790:18790"
     volumes:
       - ~/.openclaw:/home/node/.openclaw
+      - ~/.openclaw/workspace:/home/node/.openclaw/workspace
     environment:
       - NODE_ENV=production
+      - OPENCLAW_SKIP_SERVICE_CHECK=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  socat-proxy:
+    image: alpine/socat
+    container_name: openclaw-socat
+    restart: unless-stopped
+    network_mode: "service:openclaw"
+    command: "TCP-LISTEN:18790,fork,bind=0.0.0.0,reuseaddr TCP:127.0.0.1:18789"
+
+  openclaw-cli:
+    image: ghcr.io/zx06/openclaw:latest
+    container_name: openclaw-cli
+    stdin_open: true
+    tty: true
+    # Uncomment if running on Synology NAS or other systems with UID/GID issues
+    # user: "1000:1000"
+    volumes:
+      - ~/.openclaw:/home/node/.openclaw
+      - ~/.openclaw/workspace:/home/node/.openclaw/workspace
+    environment:
+      - NODE_ENV=production
+    entrypoint: ["openclaw"]
+    profiles:
+      - cli

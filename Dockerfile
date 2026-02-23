@@ -1,5 +1,9 @@
 FROM node:24-bookworm
 
+LABEL org.opencontainers.image.source="https://github.com/zx06/openclaw-docker"
+LABEL org.opencontainers.image.description="Pre-built OpenClaw Docker image with Playwright and Feishu support"
+LABEL org.opencontainers.image.licenses="MIT"
+
 ENV \
     NODE_ENV=production \
     PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \

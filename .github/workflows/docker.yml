@@ -2,8 +2,14 @@ name: Build and Push Docker Image
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每日 00:00 UTC
-  workflow_dispatch:  # 手动触发
+    - cron: '0 0 * * *'  # 每日 00:00 UTC（兜底构建）
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: '推送镜像到 Registry'
+        required: false
+        default: true
+        type: boolean
   push:
     branches:
       - master
@@ -56,8 +62,22 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Generate build summary
+        run: |
+          echo "### 🦞 OpenClaw Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
+            echo "ℹ️ Image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Image pushed to registry" >> $GITHUB_STEP_SUMMARY
+          fi
