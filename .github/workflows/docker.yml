@@ -168,18 +168,14 @@ jobs:
         id: image_size
         run: |
           IMAGE_REF="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
-          RAW_JSON="$(docker buildx imagetools inspect "$IMAGE_REF" --raw)"
-          SIZE_BYTES="$(echo "$RAW_JSON" | jq -r '
-            if .manifests then
-              ([.manifests[].size] | add)
-            elif .layers then
-              ([.layers[].size] | add)
-            else
-              0
-            end
-          ')"
-          SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
-          echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
+          SIZE_BYTES="$(docker buildx imagetools inspect "$IMAGE_REF" | awk '/^[[:space:]]*Size:/ {sum += $2} END {print sum+0}')"
+
+          if [ -z "$SIZE_BYTES" ] || [ "$SIZE_BYTES" -le 0 ]; then
+            echo "mb=N/A" >> "$GITHUB_OUTPUT"
+          else
+            SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
+            echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Generate build summary (manifest)
         run: |
