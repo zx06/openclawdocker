@@ -6,7 +6,7 @@ on:
   workflow_dispatch:  # 手动触发
   push:
     branches:
-      - main
+      - master
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker.yml'
@@ -52,7 +52,7 @@ jobs:
             type=raw,value=daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64

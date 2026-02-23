@@ -36,8 +36,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g @larksuiteoapi/node-sdk \
     && npx playwright install chromium --with-deps
 
-RUN mkdir -p /home/node/.openclaw && \
-    chown -R node:node /home/node/.openclaw
+RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
+    chown -R node:node /home/node/.openclaw /home/node/.cache
 
 USER node
 WORKDIR /home/node
