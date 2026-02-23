@@ -34,10 +34,20 @@ jobs:
           docker run -d --name openclaw-smoke -p 18789:18789 openclaw:smoke
           docker ps --filter "name=openclaw-smoke"
 
-      - name: Verify required commands exist
+      - name: Verify required commands exist (entrypoint override)
         run: |
-          docker exec openclaw-smoke openclaw --help
-          docker exec openclaw-smoke npx playwright --version
+          docker run --rm --entrypoint sh openclaw:smoke -lc "openclaw --help >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "npx playwright --version"
+
+      - name: Verify container stays up
+        run: |
+          sleep 10
+          if [ "$(docker inspect -f '{{.State.Running}}' openclaw-smoke)" != "true" ]; then
+            echo "Container exited unexpectedly"
+            docker ps -a
+            docker logs openclaw-smoke || true
+            exit 1
+          fi
 
       - name: Verify gateway process and health command
         run: |
