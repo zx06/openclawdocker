@@ -84,8 +84,8 @@ docker compose run --rm openclaw-cli onboard
 |------|------|
 | `latest` | 最新构建 |
 | `daily-YYYYMMDD` | 每日构建 |
-| `mini-latest` | 精简版（仅必要依赖） |
-| `mini-daily-YYYYMMDD` | 精简版每日构建 |
+| `mini-latest` | 精简版（不含 Playwright/浏览器） |
+| `mini-daily-YYYYMMDD` | 精简版每日构建（不含 Playwright/浏览器） |
 
 ## 本地构建
 

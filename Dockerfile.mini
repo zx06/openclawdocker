@@ -6,17 +6,13 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV \
     NODE_ENV=production \
-    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
     npm_config_registry=https://registry.npmmirror.com
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g openclaw@latest \
-    && npm install -g playwright \
-    && npx playwright install chromium --with-deps \
-    && chmod -R o+rx /home/node/.cache/ms-playwright
+    && npm install -g openclaw@latest
 
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
     chown -R node:node /home/node/.openclaw /home/node/.cache
