@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  openclaw:
+    image: ghcr.io/zx06/openclaw:latest
+    container_name: openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789"
+    volumes:
+      - ~/.openclaw:/home/node/.openclaw
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
