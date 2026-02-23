@@ -24,6 +24,8 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/openclaw
+  ACR_REGISTRY: crpi-eqrznm2n8gue9pue.cn-hangzhou.personal.cr.aliyuncs.com
+  ACR_IMAGE_NAME: crpi-eqrznm2n8gue9pue.cn-hangzhou.personal.cr.aliyuncs.com/zx06/openclaw
 
 jobs:
   prepare:
@@ -85,13 +87,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
+      - name: Log in to GHCR
         if: needs.prepare.outputs.should_push == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Alibaba ACR
+        if: needs.prepare.outputs.should_push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and push native image
         uses: docker/build-push-action@v6
@@ -102,6 +112,7 @@ jobs:
           push: ${{ needs.prepare.outputs.should_push == 'true' }}
           tags: |
             ${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}
+            ${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
 
@@ -124,10 +135,11 @@ jobs:
           echo "### Native Build: ${{ matrix.variant }} / linux/${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Runner:** ${{ matrix.runner }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**GHCR Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**ACR Tag:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.prepare.outputs.should_push }}" = "true" ]; then
             echo "**Image Size:** ${{ steps.native_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Native image pushed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Native image pushed to GHCR and ACR" >> $GITHUB_STEP_SUMMARY
           else
             echo "ℹ️ Native image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
           fi
@@ -156,44 +168,58 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create multi-arch manifest tags
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Create multi-arch manifest tags (GHCR + ACR)
         run: |
-          SOURCES=(
-            "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-amd64"
-            "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-arm64"
-          )
-
-          TAG_ARGS=(
-            "-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
-          )
-
           ANNOTATION_ARGS=(
             "--annotation" "index:org.opencontainers.image.description=${{ matrix.description }}"
             "--annotation" "index:org.opencontainers.image.source=https://github.com/${{ github.repository }}"
           )
 
-          if [ "${{ github.ref_name }}" = "master" ]; then
-            TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest")
-            TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}")
-          fi
+          create_manifest() {
+            local repo="$1"
+            local sources=(
+              "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-amd64"
+              "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-arm64"
+            )
+            local tag_args=(
+              "-t" "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
+            )
 
-          docker buildx imagetools create "${ANNOTATION_ARGS[@]}" "${TAG_ARGS[@]}" "${SOURCES[@]}"
+            if [ "${{ github.ref_name }}" = "master" ]; then
+              tag_args+=("-t" "${repo}:${{ matrix.tag_prefix }}latest")
+              tag_args+=("-t" "${repo}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}")
+            fi
+
+            docker buildx imagetools create "${ANNOTATION_ARGS[@]}" "${tag_args[@]}" "${sources[@]}"
+          }
+
+          create_manifest "${{ env.IMAGE_NAME }}"
+          create_manifest "${{ env.ACR_IMAGE_NAME }}"
 
       - name: Generate build summary (manifest)
         run: |
           echo "### 🦞 ${{ matrix.label }} Multi-Arch Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Architectures:** linux/amd64, linux/arm64 (native runners, no QEMU)" >> $GITHUB_STEP_SUMMARY
-          echo "**Primary Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**GHCR Primary Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**ACR Primary Tag:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.ref_name }}" = "master" ]; then
-            echo "**Release Tags:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**GHCR Release Tags:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**ACR Release Tags:** \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
           fi
           echo "ℹ️ Size details are listed in each native build job (amd64/arm64)." >> $GITHUB_STEP_SUMMARY
-          echo "✅ Multi-arch tags pushed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Multi-arch tags pushed to GHCR and ACR" >> $GITHUB_STEP_SUMMARY
