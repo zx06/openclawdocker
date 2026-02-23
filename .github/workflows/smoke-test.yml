@@ -31,7 +31,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name openclaw-smoke -p 18789:18789 openclaw:smoke --allow-unconfigured
+          docker run -d --name openclaw-smoke -p 18789:18789 openclaw:smoke
           docker ps --filter "name=openclaw-smoke"
 
       - name: Verify required commands exist (entrypoint override)

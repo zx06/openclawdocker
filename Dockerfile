@@ -58,4 +58,4 @@ VOLUME ["/home/node/.openclaw"]
 
 EXPOSE 18789
 
-ENTRYPOINT ["openclaw", "gateway", "--allow-unconfigured"]
+ENTRYPOINT ["openclaw", "gateway", "run", "--allow-unconfigured"]
