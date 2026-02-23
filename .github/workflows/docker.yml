@@ -18,12 +18,62 @@ on:
       - "Dockerfile.mini"
       - ".github/workflows/docker.yml"
 
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/openclaw
 
 jobs:
-  build-and-push:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      date: ${{ steps.vars.outputs.date }}
+      should_push: ${{ steps.vars.outputs.should_push }}
+    steps:
+      - name: Resolve build variables
+        id: vars
+        run: |
+          echo "date=$(date '+%Y%m%d')" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
+            echo "should_push=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_push=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-native:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: full
+            dockerfile: Dockerfile
+            tag_prefix: ""
+            cache_scope: full-amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - variant: full
+            dockerfile: Dockerfile
+            tag_prefix: ""
+            cache_scope: full-arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - variant: mini
+            dockerfile: Dockerfile.mini
+            tag_prefix: mini-
+            cache_scope: mini-amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - variant: mini
+            dockerfile: Dockerfile.mini
+            tag_prefix: mini-
+            cache_scope: mini-arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -32,10 +82,60 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get current date
-        id: date
-        run: echo "date=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
+      - name: Log in to Container Registry
+        if: needs.prepare.outputs.should_push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push native image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.arch }}
+          push: ${{ needs.prepare.outputs.should_push == 'true' }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+
+      - name: Build summary (native)
+        run: |
+          echo "### Native Build: ${{ matrix.variant }} / linux/${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Runner:** ${{ matrix.runner }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.prepare.outputs.should_push }}" = "true" ]; then
+            echo "✅ Native image pushed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Native image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  publish-manifest:
+    needs: [prepare, build-native]
+    if: needs.prepare.outputs.should_push == 'true'
+    strategy:
+      matrix:
+        include:
+          - variant: full
+            tag_prefix: ""
+            label: OpenClaw
+          - variant: mini
+            tag_prefix: mini-
+            label: OpenClaw Mini
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -46,145 +146,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Compute image size
-        id: image_size
-        if: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
+      - name: Create multi-arch manifest tags
         run: |
-          IMAGE_REF="$(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
+          SOURCES=(
+            "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-amd64"
+            "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-arm64"
+          )
+
+          TAG_ARGS=(
+            "-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
+          )
+
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest")
+            TAG_ARGS+=("-t" "${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}")
+          fi
+
+          docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
+
+      - name: Compute manifest size
+        id: image_size
+        run: |
+          IMAGE_REF="${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
           RAW_JSON="$(docker buildx imagetools inspect "$IMAGE_REF" --raw)"
           SIZE_BYTES="$(echo "$RAW_JSON" | jq -r '
-            if .layers then
-              ([.layers[].size] | add)
-            elif .manifests then
+            if .manifests then
               ([.manifests[].size] | add)
+            elif .layers then
+              ([.layers[].size] | add)
             else
               0
             end
           ')"
           SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
-          echo "bytes=$SIZE_BYTES" >> "$GITHUB_OUTPUT"
           echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
 
-      - name: Generate build summary
+      - name: Generate build summary (manifest)
         run: |
-          echo "### 🦞 OpenClaw Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🦞 ${{ matrix.label }} Multi-Arch Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ "${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}" = "true" ]; then
-            echo "**Approx Image Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
+          echo "**Architectures:** linux/amd64, linux/arm64 (native runners, no QEMU)" >> $GITHUB_STEP_SUMMARY
+          echo "**Primary Tag:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            echo "**Release Tags:** \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}latest\`, \`${{ env.IMAGE_NAME }}:${{ matrix.tag_prefix }}daily-${{ needs.prepare.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY
           fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
-            echo "ℹ️ Image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "✅ Image pushed to registry" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  build-and-push-mini:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (mini)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=mini-
-            type=raw,value=mini-latest,enable={{is_default_branch}}
-            type=raw,value=mini-daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
-
-      - name: Build and push Docker image (mini)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.mini
-          platforms: linux/amd64
-          push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=mini
-          cache-to: type=gha,mode=max,scope=mini
-
-      - name: Compute image size (mini)
-        id: image_size
-        if: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
-        run: |
-          IMAGE_REF="$(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
-          RAW_JSON="$(docker buildx imagetools inspect "$IMAGE_REF" --raw)"
-          SIZE_BYTES="$(echo "$RAW_JSON" | jq -r '
-            if .layers then
-              ([.layers[].size] | add)
-            elif .manifests then
-              ([.manifests[].size] | add)
-            else
-              0
-            end
-          ')"
-          SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
-          echo "bytes=$SIZE_BYTES" >> "$GITHUB_OUTPUT"
-          echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
-
-      - name: Generate build summary (mini)
-        run: |
-          echo "### 🦞 OpenClaw Docker Mini Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ "${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}" = "true" ]; then
-            echo "**Approx Image Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
-          fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
-            echo "ℹ️ Mini image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "✅ Mini image pushed to registry" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "**Approx Manifest Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Multi-arch tags pushed" >> $GITHUB_STEP_SUMMARY
