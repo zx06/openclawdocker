@@ -17,14 +17,12 @@ on:
       - "Dockerfile"
       - ".github/workflows/docker.yml"
 
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/openclaw
+
 jobs:
   build-and-push:
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -51,20 +49,19 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/openclaw
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=daily-${{ steps.date.outputs.date }},enable={{is_default_branch}}
-            type=raw,value=${{ matrix.platform == 'linux/arm64' && 'arm64' || '' }},enable=${{ matrix.platform == 'linux/arm64' && is_default_branch }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64
           push: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -75,7 +72,7 @@ jobs:
         run: |
           echo "### 🦞 OpenClaw Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
