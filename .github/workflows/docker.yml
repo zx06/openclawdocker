@@ -69,6 +69,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Compute image size
+        id: image_size
+        if: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
+        run: |
+          IMAGE_REF="$(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
+          RAW_JSON="$(docker buildx imagetools inspect "$IMAGE_REF" --raw)"
+          SIZE_BYTES="$(echo "$RAW_JSON" | jq -r '
+            if .layers then
+              ([.layers[].size] | add)
+            elif .manifests then
+              ([.manifests[].size] | add)
+            else
+              0
+            end
+          ')"
+          SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
+          echo "bytes=$SIZE_BYTES" >> "$GITHUB_OUTPUT"
+          echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
+
       - name: Generate build summary
         run: |
           echo "### 🦞 OpenClaw Docker Build Summary" >> $GITHUB_STEP_SUMMARY
@@ -78,6 +97,9 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}" = "true" ]; then
+            echo "**Approx Image Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
             echo "ℹ️ Image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
           else
@@ -130,6 +152,25 @@ jobs:
           cache-from: type=gha,scope=mini
           cache-to: type=gha,mode=max,scope=mini
 
+      - name: Compute image size (mini)
+        id: image_size
+        if: ${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}
+        run: |
+          IMAGE_REF="$(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
+          RAW_JSON="$(docker buildx imagetools inspect "$IMAGE_REF" --raw)"
+          SIZE_BYTES="$(echo "$RAW_JSON" | jq -r '
+            if .layers then
+              ([.layers[].size] | add)
+            elif .manifests then
+              ([.manifests[].size] | add)
+            else
+              0
+            end
+          ')"
+          SIZE_MB="$(awk "BEGIN {printf \"%.2f\", ${SIZE_BYTES}/1024/1024}")"
+          echo "bytes=$SIZE_BYTES" >> "$GITHUB_OUTPUT"
+          echo "mb=$SIZE_MB" >> "$GITHUB_OUTPUT"
+
       - name: Generate build summary (mini)
         run: |
           echo "### 🦞 OpenClaw Docker Mini Build Summary" >> $GITHUB_STEP_SUMMARY
@@ -139,6 +180,9 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ (github.event_name != 'workflow_dispatch') || inputs.push_image }}" = "true" ]; then
+            echo "**Approx Image Size:** ${{ steps.image_size.outputs.mb }} MB" >> $GITHUB_STEP_SUMMARY
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.push_image }}" != "true" ]; then
             echo "ℹ️ Mini image built but not pushed (manual trigger with push disabled)" >> $GITHUB_STEP_SUMMARY
           else
