@@ -4,7 +4,7 @@ services:
     container_name: openclaw
     restart: unless-stopped
     ports:
-      - "18789:18789"
+      - "18789:18790"
       - "18790:18790"
     volumes:
       - ~/.openclaw:/home/node/.openclaw
@@ -13,7 +13,7 @@ services:
       - NODE_ENV=production
       - OPENCLAW_SKIP_SERVICE_CHECK=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
+      test: ["CMD-SHELL", "openclaw gateway health >/dev/null 2>&1 || openclaw gateway status >/dev/null 2>&1"]
       interval: 30s
       timeout: 10s
       retries: 3
