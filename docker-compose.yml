@@ -3,10 +3,6 @@ services:
     image: ghcr.io/zx06/openclaw:latest
     container_name: openclaw
     restart: unless-stopped
-    stdin_open: true
-    tty: true
-    # Uncomment if running on Synology NAS or other systems with UID/GID issues
-    # user: "1000:1000"
     ports:
       - "18789:18789"
       - "18790:18790"
