@@ -8,6 +8,9 @@ ENV \
     NODE_ENV=production \
     PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
     npm_config_registry=https://registry.npmmirror.com \
+    npm_config_update_notifier=false \
+    npm_config_fund=false \
+    npm_config_audit=false \
     TZ=Asia/Shanghai
 
 # Install system dependencies
@@ -50,10 +53,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fc-cache -fv \
     && apt-get clean
 
-# Install Node.js global packages - separate runs to avoid conflicts
-RUN npm install -g openclaw@latest
-RUN npm install -g playwright @larksuiteoapi/node-sdk @iflow-ai/iflow-cli opencode-ai @github/copilot @playwright/test
-RUN npx playwright install chromium --with-deps && chmod -R o+rx /home/node/.cache/ms-playwright
+# Install Node.js global packages in one layer to improve cache reuse and reduce image size
+RUN npm install -g \
+    openclaw@latest \
+    playwright \
+    @larksuiteoapi/node-sdk \
+    @iflow-ai/iflow-cli \
+    opencode-ai \
+    @github/copilot \
+    @playwright/test \
+    && npm cache clean --force \
+    && npx playwright install chromium --with-deps \
+    && chmod -R o+rx /home/node/.cache/ms-playwright
 
 # Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
@@ -68,7 +79,7 @@ EXPOSE 18789
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD openclaw status || exit 1
+    CMD openclaw gateway health >/dev/null 2>&1 || openclaw gateway status >/dev/null 2>&1
 
 # Use tini as init process for proper signal handling
 ENTRYPOINT ["tini", "--", "openclaw", "gateway", "run", "--allow-unconfigured"]

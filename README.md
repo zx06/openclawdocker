@@ -2,34 +2,26 @@
 
 每日自动构建的 OpenClaw Docker 镜像，支持飞书、Playwright 浏览器功能。
 
+> 官方 CLI 文档：<https://docs.openclaw.ai/cli>
+
 ## 特性
 
 - 基于 Node.js 24 LTS + Debian Bookworm
 - 包含 Playwright Chromium 浏览器
 - 支持飞书插件依赖
 - 中文字体支持（避免截图乱码）
-- 国内 npm 镜像加速
+- 国内 npm 镜像加速 + npm 安静模式（关闭 audit/fund/update-notifier）
 - socat-proxy 代理服务（兼容 Synology NAS 等特殊网络环境）
+- 健康检查统一为 `openclaw gateway health || openclaw gateway status`（更贴近运行态）
+- `.dockerignore` 优化构建上下文（减少 CI 上传体积与构建时间）
 - 智能版本追踪：检测到 openclaw npm 新版本时自动触发构建
 
 ## 快速开始
 
-### 一键安装（推荐）
-
-**Linux / macOS:**
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zx06/openclaw-docker/master/install.sh)
-```
-
-**Windows PowerShell:**
-```powershell
-irm https://raw.githubusercontent.com/zx06/openclaw-docker/master/install.ps1 | iex
-```
-
 ### 使用 Docker Compose
 
 ```bash
-# 启动
+# 启动（推荐，已启用 init: true 处理僵尸进程）
 docker compose up -d openclaw
 
 # 查看日志
@@ -63,6 +55,17 @@ docker compose run --rm openclaw-cli onboard
 
 > 说明：若未先完成 `onboard`，直接启动 `openclaw gateway` 可能提示缺少配置并退出。
 
+可选：通过容器生成 Bash 自动补全（不依赖安装脚本）：
+
+```bash
+mkdir -p ~/.openclaw/completions
+# 补全子命令以官方 CLI 文档为准：https://docs.openclaw.ai/cli
+docker compose run --rm --entrypoint sh openclaw-cli -lc 'openclaw completion bash' > ~/.openclaw/completions/openclaw.bash
+
+grep -q 'openclaw/completions/openclaw.bash' ~/.bashrc ||   echo '[ -f "$HOME/.openclaw/completions/openclaw.bash" ] && source "$HOME/.openclaw/completions/openclaw.bash"' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ## 访问
 
 | 服务 | 地址 |
@@ -76,7 +79,9 @@ docker compose run --rm openclaw-cli onboard
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `npm_config_registry` | https://registry.npmmirror.com | npm 镜像 |
-| `OPENCLAW_SKIP_SERVICE_CHECK` | true | 跳过服务检查，避免启动失败 |
+| `npm_config_update_notifier` | false | 关闭 npm 更新提醒，减少日志噪音 |
+| `npm_config_fund` | false | 关闭 npm fund 提示 |
+| `npm_config_audit` | false | 关闭 npm audit（容器运行时无必要） |
 
 ## 镜像标签
 

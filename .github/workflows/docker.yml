@@ -16,6 +16,7 @@ on:
     paths:
       - "Dockerfile"
       - "Dockerfile.mini"
+      - ".dockerignore"
       - ".github/workflows/docker.yml"
 
 concurrency:

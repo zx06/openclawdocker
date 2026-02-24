@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - "Dockerfile"
+      - "Dockerfile.mini"
+      - ".dockerignore"
       - "docker-compose.yml"
       - ".github/workflows/smoke-test.yml"
       - ".github/workflows/docker.yml"
@@ -13,6 +15,8 @@ on:
       - master
     paths:
       - "Dockerfile"
+      - "Dockerfile.mini"
+      - ".dockerignore"
       - "docker-compose.yml"
       - ".github/workflows/smoke-test.yml"
       - ".github/workflows/docker.yml"
@@ -38,6 +42,13 @@ jobs:
         run: |
           docker run --rm --entrypoint sh openclaw:smoke -lc "openclaw --help >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "npx playwright --version"
+      - name: Build mini image
+        run: docker build -f Dockerfile.mini -t openclaw:smoke-mini .
+
+      - name: Verify mini image command availability
+        run: |
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "openclaw --help >/dev/null"
+
 
       - name: Verify container stays up
         run: |
@@ -71,3 +82,4 @@ jobs:
         run: |
           docker rm -f openclaw-smoke || true
           docker rmi openclaw:smoke || true
+          docker rmi openclaw:smoke-mini || true
