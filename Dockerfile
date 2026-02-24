@@ -51,6 +51,7 @@ RUN npm install -g openclaw@latest \
     && npm install -g @iflow-ai/iflow-cli \
     && npm install -g opencode-ai \
     && npm install -g @github/copilot \
+    && npm install -g @playwright/test \
     && npx playwright install chromium --with-deps \
     && chmod -R o+rx /home/node/.cache/ms-playwright
 
