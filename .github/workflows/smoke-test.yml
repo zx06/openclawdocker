@@ -42,12 +42,18 @@ jobs:
         run: |
           docker run --rm --entrypoint sh openclaw:smoke -lc "openclaw --help >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "npx playwright --version"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "claude --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "gemini --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "codex --version >/dev/null"
       - name: Build mini image
         run: docker build -f Dockerfile.mini -t openclaw:smoke-mini .
 
       - name: Verify mini image command availability
         run: |
           docker run --rm --entrypoint sh openclaw:smoke-mini -lc "openclaw --help >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "claude --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "gemini --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "codex --version >/dev/null"
 
 
       - name: Verify container stays up

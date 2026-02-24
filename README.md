@@ -9,6 +9,7 @@
 - 基于 Node.js 24 LTS + Debian Bookworm
 - 包含 Playwright Chromium 浏览器
 - 支持飞书插件依赖
+- 预装常用 AI Agent CLI（OpenClaw / Claude Code / Gemini CLI / OpenAI Codex）
 - 中文字体支持（避免截图乱码）
 - 国内 npm 镜像加速 + npm 安静模式（关闭 audit/fund/update-notifier）
 - socat-proxy 代理服务（兼容 Synology NAS 等特殊网络环境）
@@ -43,6 +44,21 @@ docker run -d \
   -p 18789:18789 \
   -v ~/.openclaw:/home/node/.openclaw \
   ghcr.io/zx06/openclaw:latest
+```
+
+### 预装 CLI 工具
+
+容器内默认包含以下常用 CLI：
+
+- `openclaw`
+- `claude`
+- `gemini`
+- `codex`
+
+可快速检查：
+
+```bash
+docker run --rm --entrypoint sh ghcr.io/zx06/openclaw:latest -lc "openclaw --help && claude --version && gemini --version && codex --version"
 ```
 
 ## 首次配置
