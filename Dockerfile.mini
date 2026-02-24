@@ -17,13 +17,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     tini \
+    jq \
+    ripgrep \
+    fd-find \
+    bat \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
-    && npm install -g \
-    openclaw@latest \
-    @anthropic-ai/claude-code \
-    @google/gemini-cli \
-    @openai/codex \
+    && npm install -g openclaw@latest \
     && npm cache clean --force
 
 # Configure bash completion at build time (best-effort)

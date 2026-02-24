@@ -21,6 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     docker.io \
     jq \
+    ripgrep \
+    fd-find \
+    bat \
     git \
     htop \
     iputils-ping \
@@ -62,9 +65,6 @@ RUN npm install -g \
     opencode-ai \
     @github/copilot \
     @playwright/test \
-    @anthropic-ai/claude-code \
-    @google/gemini-cli \
-    @openai/codex \
     && npm cache clean --force \
     && npx playwright install chromium --with-deps \
     && chmod -R o+rx /home/node/.cache/ms-playwright
