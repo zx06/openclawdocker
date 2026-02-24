@@ -7,13 +7,21 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV \
     NODE_ENV=production \
     PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
-    npm_config_registry=https://registry.npmmirror.com
+    npm_config_registry=https://registry.npmmirror.com \
+    TZ=Asia/Shanghai
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     wget \
     gnupg \
+    docker.io \
+    jq \
+    git \
+    htop \
+    iputils-ping \
+    dnsutils \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
@@ -37,17 +45,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopus0 \
     fonts-noto-cjk \
     fonts-wqy-zenhei \
+    tini \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv \
-    && npm install -g openclaw@latest \
-    && npm install -g playwright \
-    && npm install -g @larksuiteoapi/node-sdk \
-    && npm install -g @iflow-ai/iflow-cli \
-    && npm install -g opencode-ai \
-    && npm install -g @github/copilot \
-    && npx playwright install chromium --with-deps \
-    && chmod -R o+rx /home/node/.cache/ms-playwright
+    && apt-get clean
 
+# Install Node.js global packages - separate runs to avoid conflicts
+RUN npm install -g openclaw@latest
+RUN npm install -g playwright @larksuiteoapi/node-sdk @iflow-ai/iflow-cli opencode-ai @github/copilot @playwright/test
+RUN npx playwright install chromium --with-deps && chmod -R o+rx /home/node/.cache/ms-playwright
+
+# Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
     chown -R node:node /home/node/.openclaw /home/node/.cache
 
@@ -58,4 +66,9 @@ VOLUME ["/home/node/.openclaw"]
 
 EXPOSE 18789
 
-ENTRYPOINT ["openclaw", "gateway", "run", "--allow-unconfigured"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD openclaw status || exit 1
+
+# Use tini as init process for proper signal handling
+ENTRYPOINT ["tini", "--", "openclaw", "gateway", "run", "--allow-unconfigured"]

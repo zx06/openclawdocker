@@ -6,14 +6,19 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV \
     NODE_ENV=production \
-    npm_config_registry=https://registry.npmmirror.com
+    npm_config_registry=https://registry.npmmirror.com \
+    TZ=Asia/Shanghai
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    tini \
     && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
     && npm install -g openclaw@latest
 
+# Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
     chown -R node:node /home/node/.openclaw /home/node/.cache
 
@@ -24,4 +29,9 @@ VOLUME ["/home/node/.openclaw"]
 
 EXPOSE 18789
 
-ENTRYPOINT ["openclaw", "gateway", "run", "--allow-unconfigured"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD openclaw status || exit 1
+
+# Use tini as init process for proper signal handling
+ENTRYPOINT ["tini", "--", "openclaw", "gateway", "run", "--allow-unconfigured"]
