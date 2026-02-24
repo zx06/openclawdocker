@@ -17,6 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     docker.io \
+    jq \
+    git \
+    htop \
+    iputils-ping \
+    dnsutils \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
