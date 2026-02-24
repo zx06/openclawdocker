@@ -50,16 +50,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fc-cache -fv \
     && apt-get clean
 
-# Install Node.js global packages
-RUN npm install -g openclaw@latest \
-    && npm install -g playwright \
-    && npm install -g @larksuiteoapi/node-sdk \
-    && npm install -g @iflow-ai/iflow-cli \
-    && npm install -g opencode-ai \
-    && npm install -g @github/copilot \
-    && npm install -g @playwright/test \
-    && npx playwright install chromium --with-deps \
-    && chmod -R o+rx /home/node/.cache/ms-playwright
+# Install Node.js global packages - separate runs to avoid conflicts
+RUN npm install -g openclaw@latest
+RUN npm install -g playwright @larksuiteoapi/node-sdk @iflow-ai/iflow-cli opencode-ai @github/copilot @playwright/test
+RUN npx playwright install chromium --with-deps && chmod -R o+rx /home/node/.cache/ms-playwright
 
 # Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
