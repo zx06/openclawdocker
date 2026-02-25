@@ -63,6 +63,32 @@ docker run -d \
 docker run --rm --entrypoint sh ghcr.io/zx06/openclaw:latest -lc "openclaw --help && rg --version && (fd --version || fdfind --version) && (batcat --version || bat --version) && jq --version && git --version"
 ```
 
+## Smoke Test（验证浏览器是否对运行用户可用）
+
+```bash
+docker run --rm --entrypoint bash ghcr.io/zx06/openclaw:latest -lc '
+set -euo pipefail
+
+echo "user=$(whoami)"
+echo "home=$HOME"
+echo "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-<empty>}"
+
+# 1) agent-browser 命令存在
+agent-browser --version
+
+# 2) 浏览器安装目录存在且 node 用户可读
+[ -d /ms-playwright ]
+[ -r /ms-playwright ]
+
+# 3) 目录内至少有一个浏览器子目录（不包含 .links）
+find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
+
+echo "smoke-test passed: browser binaries are visible to runtime user"
+'
+```
+
+> 如果上面第 3 步失败，通常表示镜像构建阶段浏览器未成功下载（例如网络问题），需要在构建日志中排查 `agent-browser install --with-deps`。
+
 ## 首次配置
 
 容器启动后，运行配置向导：
@@ -89,6 +115,7 @@ docker compose run --rm openclaw-cli onboard
 | `npm_config_update_notifier` | false | 关闭 npm 更新提醒，减少日志噪音 |
 | `npm_config_fund` | false | 关闭 npm fund 提示 |
 | `npm_config_audit` | false | 关闭 npm audit（容器运行时无必要） |
+| `PLAYWRIGHT_BROWSERS_PATH` | /ms-playwright | Playwright/agent-browser 浏览器缓存统一路径（root 构建 + node 运行均可见） |
 
 ## 镜像标签
 
