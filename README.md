@@ -1,13 +1,13 @@
 # OpenClaw Docker
 
-每日自动构建的 OpenClaw Docker 镜像，支持飞书、Playwright 浏览器功能。
+每日自动构建的 OpenClaw Docker 镜像，支持飞书、agent-browser 浏览器功能。
 
 > 官方 CLI 文档：<https://docs.openclaw.ai/cli>
 
 ## 特性
 
 - 基于 Node.js 24 LTS + Debian Bookworm
-- 包含 Playwright Chromium 浏览器
+- 包含 agent-browser 浏览器运行环境
 - 支持飞书插件依赖
 - 预装常用终端效率工具（ripgrep/fd/bat/jq/git）
 - 中文字体支持（避免截图乱码）
@@ -96,8 +96,8 @@ docker compose run --rm openclaw-cli onboard
 |------|------|
 | `latest` | 最新构建 |
 | `daily-YYYYMMDD` | 每日构建 |
-| `mini-latest` | 精简版（不含 Playwright/浏览器） |
-| `mini-daily-YYYYMMDD` | 精简版每日构建（不含 Playwright/浏览器） |
+| `mini-latest` | 精简版（不含 agent-browser/浏览器） |
+| `mini-daily-YYYYMMDD` | 精简版每日构建（不含 agent-browser/浏览器） |
 
 ## 本地构建
 

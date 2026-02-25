@@ -1,12 +1,11 @@
 FROM node:24-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/zx06/openclaw-docker"
-LABEL org.opencontainers.image.description="Pre-built OpenClaw Docker image with Playwright and Feishu support"
+LABEL org.opencontainers.image.description="Pre-built OpenClaw Docker image with agent-browser and Feishu support"
 LABEL org.opencontainers.image.licenses="MIT"
 
 ENV \
     NODE_ENV=production \
-    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
     npm_config_registry=https://registry.npmmirror.com \
     npm_config_update_notifier=false \
     npm_config_fund=false \
@@ -59,15 +58,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Node.js global packages in one layer to improve cache reuse and reduce image size
 RUN npm install -g \
     openclaw@latest \
-    playwright \
+    agent-browser \
     @larksuiteoapi/node-sdk \
     @iflow-ai/iflow-cli \
     opencode-ai \
     @github/copilot \
-    @playwright/test \
-    && npm cache clean --force \
-    && npx playwright install chromium --with-deps \
-    && chmod -R o+rx /home/node/.cache/ms-playwright
+    && agent-browser install --with-deps \
+    && npm cache clean --force
 
 # Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \

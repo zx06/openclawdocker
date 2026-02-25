@@ -156,11 +156,11 @@ jobs:
           - variant: full
             tag_prefix: ""
             label: OpenClaw
-            description: Pre-built OpenClaw Docker image with Playwright and Feishu support
+            description: Pre-built OpenClaw Docker image with agent-browser and Feishu support
           - variant: mini
             tag_prefix: mini-
             label: OpenClaw Mini
-            description: Minimal OpenClaw Docker image without Playwright and browser dependencies
+            description: Minimal OpenClaw Docker image without agent-browser and browser dependencies
 
     runs-on: ubuntu-latest
     permissions:

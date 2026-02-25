@@ -41,7 +41,7 @@ jobs:
       - name: Verify required commands exist (entrypoint override)
         run: |
           docker run --rm --entrypoint sh openclaw:smoke -lc "openclaw --help >/dev/null"
-          docker run --rm --entrypoint sh openclaw:smoke -lc "npx playwright --version"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "agent-browser --version >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "rg --version >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "fd --version >/dev/null || fdfind --version >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "batcat --version >/dev/null || bat --version >/dev/null"
