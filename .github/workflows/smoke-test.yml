@@ -45,6 +45,17 @@ jobs:
           docker run --rm --entrypoint sh openclaw:smoke -lc "rg --version >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "fd --version >/dev/null || fdfind --version >/dev/null"
           docker run --rm --entrypoint sh openclaw:smoke -lc "batcat --version >/dev/null || bat --version >/dev/null"
+      - name: Verify browser binaries are visible to runtime node user
+        run: |
+          docker run --rm --entrypoint bash openclaw:smoke -lc '
+          set -euo pipefail
+          [ "$(whoami)" = "node" ]
+          [ "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright" ]
+          [ -d /ms-playwright ]
+          [ -r /ms-playwright ]
+          find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
+          '
+
       - name: Build mini image
         run: docker build -f Dockerfile.mini -t openclaw:smoke-mini .
 
