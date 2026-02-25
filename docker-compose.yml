@@ -3,15 +3,15 @@ services:
     image: ghcr.io/zx06/openclaw:latest
     container_name: openclaw
     restart: unless-stopped
+    init: true
     ports:
-      - "18789:18790"
+      - "18789:18789"
       - "18790:18790"
     volumes:
       - ~/.openclaw:/home/node/.openclaw
       - ~/.openclaw/workspace:/home/node/.openclaw/workspace
     environment:
       - NODE_ENV=production
-      - OPENCLAW_SKIP_SERVICE_CHECK=true
     healthcheck:
       test: ["CMD-SHELL", "openclaw gateway health >/dev/null 2>&1 || openclaw gateway status >/dev/null 2>&1"]
       interval: 30s

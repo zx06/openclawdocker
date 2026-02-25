@@ -1,35 +1,28 @@
 # OpenClaw Docker
 
-每日自动构建的 OpenClaw Docker 镜像，支持飞书、Playwright 浏览器功能。
+每日自动构建的 OpenClaw Docker 镜像，支持飞书、agent-browser 浏览器功能。
+
+> 官方 CLI 文档：<https://docs.openclaw.ai/cli>
 
 ## 特性
 
 - 基于 Node.js 24 LTS + Debian Bookworm
-- 包含 Playwright Chromium 浏览器
+- 包含 agent-browser 浏览器运行环境
 - 支持飞书插件依赖
+- 预装常用终端效率工具（ripgrep/fd/bat/jq/git）
 - 中文字体支持（避免截图乱码）
-- 国内 npm 镜像加速
+- 国内 npm 镜像加速 + npm 安静模式（关闭 audit/fund/update-notifier）
 - socat-proxy 代理服务（兼容 Synology NAS 等特殊网络环境）
+- 健康检查统一为 `openclaw gateway health || openclaw gateway status`（更贴近运行态）
+- `.dockerignore` 优化构建上下文（减少 CI 上传体积与构建时间）
 - 智能版本追踪：检测到 openclaw npm 新版本时自动触发构建
 
 ## 快速开始
 
-### 一键安装（推荐）
-
-**Linux / macOS:**
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zx06/openclaw-docker/master/install.sh)
-```
-
-**Windows PowerShell:**
-```powershell
-irm https://raw.githubusercontent.com/zx06/openclaw-docker/master/install.ps1 | iex
-```
-
 ### 使用 Docker Compose
 
 ```bash
-# 启动
+# 启动（推荐，已启用 init: true 处理僵尸进程）
 docker compose up -d openclaw
 
 # 查看日志
@@ -51,6 +44,23 @@ docker run -d \
   -p 18789:18789 \
   -v ~/.openclaw:/home/node/.openclaw \
   ghcr.io/zx06/openclaw:latest
+```
+
+### 预装 CLI 工具
+
+容器内默认包含以下常用命令行工具：
+
+- `openclaw`
+- `rg`（ripgrep）
+- `fd` / `fdfind`（fd）
+- `bat` / `batcat`（语法高亮 cat）
+- `jq`
+- `git`
+
+可快速检查：
+
+```bash
+docker run --rm --entrypoint sh ghcr.io/zx06/openclaw:latest -lc "openclaw --help && rg --version && (fd --version || fdfind --version) && (batcat --version || bat --version) && jq --version && git --version"
 ```
 
 ## 首次配置
@@ -76,7 +86,9 @@ docker compose run --rm openclaw-cli onboard
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `npm_config_registry` | https://registry.npmmirror.com | npm 镜像 |
-| `OPENCLAW_SKIP_SERVICE_CHECK` | true | 跳过服务检查，避免启动失败 |
+| `npm_config_update_notifier` | false | 关闭 npm 更新提醒，减少日志噪音 |
+| `npm_config_fund` | false | 关闭 npm fund 提示 |
+| `npm_config_audit` | false | 关闭 npm audit（容器运行时无必要） |
 
 ## 镜像标签
 
@@ -84,8 +96,8 @@ docker compose run --rm openclaw-cli onboard
 |------|------|
 | `latest` | 最新构建 |
 | `daily-YYYYMMDD` | 每日构建 |
-| `mini-latest` | 精简版（不含 Playwright/浏览器） |
-| `mini-daily-YYYYMMDD` | 精简版每日构建（不含 Playwright/浏览器） |
+| `mini-latest` | 精简版（不含 agent-browser/浏览器） |
+| `mini-daily-YYYYMMDD` | 精简版每日构建（不含 agent-browser/浏览器） |
 
 ## 本地构建
 

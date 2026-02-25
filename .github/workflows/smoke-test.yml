@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - "Dockerfile"
+      - "Dockerfile.mini"
+      - ".dockerignore"
       - "docker-compose.yml"
       - ".github/workflows/smoke-test.yml"
       - ".github/workflows/docker.yml"
@@ -13,6 +15,8 @@ on:
       - master
     paths:
       - "Dockerfile"
+      - "Dockerfile.mini"
+      - ".dockerignore"
       - "docker-compose.yml"
       - ".github/workflows/smoke-test.yml"
       - ".github/workflows/docker.yml"
@@ -37,7 +41,20 @@ jobs:
       - name: Verify required commands exist (entrypoint override)
         run: |
           docker run --rm --entrypoint sh openclaw:smoke -lc "openclaw --help >/dev/null"
-          docker run --rm --entrypoint sh openclaw:smoke -lc "npx playwright --version"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "agent-browser --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "rg --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "fd --version >/dev/null || fdfind --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke -lc "batcat --version >/dev/null || bat --version >/dev/null"
+      - name: Build mini image
+        run: docker build -f Dockerfile.mini -t openclaw:smoke-mini .
+
+      - name: Verify mini image command availability
+        run: |
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "openclaw --help >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "rg --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "fd --version >/dev/null || fdfind --version >/dev/null"
+          docker run --rm --entrypoint sh openclaw:smoke-mini -lc "batcat --version >/dev/null || bat --version >/dev/null"
+
 
       - name: Verify container stays up
         run: |
@@ -71,3 +88,4 @@ jobs:
         run: |
           docker rm -f openclaw-smoke || true
           docker rmi openclaw:smoke || true
+          docker rmi openclaw:smoke-mini || true
