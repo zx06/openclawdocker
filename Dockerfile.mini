@@ -27,17 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g openclaw@latest \
     && npm cache clean --force
 
-# Configure bash completion at build time (follow official CLI docs)
-RUN mkdir -p /usr/share/bash-completion/completions && \
-    openclaw completion bash > /usr/share/bash-completion/completions/openclaw && \
-    test -s /usr/share/bash-completion/completions/openclaw
-
 # Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
-    chown -R node:node /home/node/.openclaw /home/node/.cache && \
-    touch /home/node/.bashrc && \
-    grep -Fq '/usr/share/bash-completion/completions/openclaw' /home/node/.bashrc \
-      || echo '[ -f /usr/share/bash-completion/completions/openclaw ] && source /usr/share/bash-completion/completions/openclaw' >> /home/node/.bashrc
+    chown -R node:node /home/node/.openclaw /home/node/.cache
 
 USER node
 WORKDIR /home/node
