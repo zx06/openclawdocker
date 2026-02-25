@@ -56,6 +56,15 @@ jobs:
           find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
           '
 
+      - name: Verify agent-browser can open a real webpage
+        run: |
+          docker run --rm --entrypoint bash openclaw:smoke -lc '
+          set -euo pipefail
+          OUT="$(agent-browser open http://example.com)"
+          echo "$OUT"
+          echo "$OUT" | grep -q "Example Domain"
+          '
+
       - name: Build mini image
         run: docker build -f Dockerfile.mini -t openclaw:smoke-mini .
 

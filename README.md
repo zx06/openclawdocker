@@ -83,11 +83,17 @@ agent-browser --version
 # 3) 目录内至少有一个浏览器子目录（不包含 .links）
 find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
 
-echo "smoke-test passed: browser binaries are visible to runtime user"
+# 4) 实际打开网页（HTTP 示例，避免部分环境 HTTPS 证书链问题）
+OUT="$(agent-browser open http://example.com)"
+echo "$OUT"
+echo "$OUT" | grep -q "Example Domain"
+
+echo "smoke-test passed: browser binaries are visible and agent-browser can open webpages"
 '
 ```
 
 > 如果上面第 3 步失败，通常表示镜像构建阶段浏览器未成功下载（例如网络问题），需要在构建日志中排查 `agent-browser install --with-deps`。
+> 如果第 4 步失败，请优先检查运行环境网络连通性、DNS 与代理配置。
 
 ## 首次配置
 
