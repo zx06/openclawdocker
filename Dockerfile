@@ -69,15 +69,10 @@ RUN npm install -g \
     && npx playwright install chromium --with-deps \
     && chmod -R o+rx /home/node/.cache/ms-playwright
 
-# Configure bash completion at build time (best-effort)
+# Configure bash completion at build time (follow official CLI docs)
 RUN mkdir -p /usr/share/bash-completion/completions && \
-    (openclaw completion bash > /usr/share/bash-completion/completions/openclaw \
-      || openclaw completion > /usr/share/bash-completion/completions/openclaw \
-      || openclaw autocomplete > /usr/share/bash-completion/completions/openclaw \
-      || true) && \
-    if [ ! -s /usr/share/bash-completion/completions/openclaw ]; then \
-      rm -f /usr/share/bash-completion/completions/openclaw; \
-    fi
+    openclaw completion bash > /usr/share/bash-completion/completions/openclaw && \
+    test -s /usr/share/bash-completion/completions/openclaw
 
 # Create directories
 RUN mkdir -p /home/node/.openclaw /home/node/.cache && \

@@ -73,7 +73,7 @@ docker compose run --rm openclaw-cli onboard
 
 > 说明：若未先完成 `onboard`，直接启动 `openclaw gateway` 可能提示缺少配置并退出。
 
-Bash 自动补全已在镜像构建阶段做 best-effort 配置（写入 `/usr/share/bash-completion/completions/openclaw`，并在容器内 `~/.bashrc` 自动 source）。如需在当前 shell 立即生效，可在容器内执行：
+Bash 自动补全已在镜像构建阶段按官方 CLI 文档配置（`openclaw completion bash`，写入 `/usr/share/bash-completion/completions/openclaw`，并在容器内 `~/.bashrc` 自动 source）。如需在当前 shell 立即生效，可在容器内执行：
 
 ```bash
 source ~/.bashrc
