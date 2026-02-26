@@ -6,11 +6,9 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV \
     NODE_ENV=production \
-    npm_config_registry=https://registry.npmmirror.com \
     npm_config_update_notifier=false \
     npm_config_fund=false \
     npm_config_audit=false \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     TZ=Asia/Shanghai
 
 # Install system dependencies
@@ -26,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bat \
     git \
     htop \
+    vim \
     iputils-ping \
     dnsutils \
     libglib2.0-0 \
@@ -64,15 +63,16 @@ RUN npm install -g \
     @iflow-ai/iflow-cli \
     opencode-ai \
     @github/copilot \
-    && agent-browser install --with-deps \
     && npm cache clean --force
 
 # Create directories
-RUN mkdir -p /home/node/.openclaw /home/node/.cache /ms-playwright && \
-    chown -R node:node /home/node/.openclaw /home/node/.cache /ms-playwright
+RUN mkdir -p /home/node/.openclaw && \
+    chown -R node:node /home/node/.openclaw
 
 USER node
 WORKDIR /home/node
+
+RUN agent-browser install --with-deps
 
 VOLUME ["/home/node/.openclaw"]
 
