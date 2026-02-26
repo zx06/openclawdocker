@@ -1,5 +1,4 @@
 # Build artifacts and temporary files
-.last-openclaw-version
 *.log
 *.tmp
 

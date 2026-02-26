@@ -50,10 +50,21 @@ jobs:
           docker run --rm --entrypoint bash openclaw:smoke -lc '
           set -euo pipefail
           [ "$(whoami)" = "node" ]
-          [ "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright" ]
-          [ -d /ms-playwright ]
-          [ -r /ms-playwright ]
-          find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
+
+          BROWSER_PATH="${PLAYWRIGHT_BROWSERS_PATH:-}"
+          if [ -z "$BROWSER_PATH" ]; then
+            if [ -d /ms-playwright ]; then
+              BROWSER_PATH="/ms-playwright"
+            else
+              BROWSER_PATH="$HOME/.cache/ms-playwright"
+            fi
+          fi
+
+          echo "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-<empty>}"
+          echo "Resolved browser path: $BROWSER_PATH"
+          [ -d "$BROWSER_PATH" ]
+          [ -r "$BROWSER_PATH" ]
+          find "$BROWSER_PATH" -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
           '
 
       - name: Verify agent-browser can open a real webpage

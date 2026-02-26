@@ -49,10 +49,12 @@ jobs:
       - name: Update version tracker
         if: steps.check_release.outputs.new_release == 'true'
         run: |
+          set -euo pipefail
+          git checkout master
           echo "${{ steps.check_release.outputs.latest_version }}" > .last-openclaw-version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .last-openclaw-version
+          git add -f .last-openclaw-version
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: update openclaw version tracker to ${{ steps.check_release.outputs.latest_version }}"
           git push
 

@@ -76,12 +76,21 @@ echo "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-<empty>}"
 # 1) agent-browser 命令存在
 agent-browser --version
 
-# 2) 浏览器安装目录存在且 node 用户可读
-[ -d /ms-playwright ]
-[ -r /ms-playwright ]
+# 2) 解析浏览器目录（优先环境变量；否则兼容 /ms-playwright 与默认缓存目录）
+BROWSER_PATH="${PLAYWRIGHT_BROWSERS_PATH:-}"
+if [ -z "$BROWSER_PATH" ]; then
+  if [ -d /ms-playwright ]; then
+    BROWSER_PATH="/ms-playwright"
+  else
+    BROWSER_PATH="$HOME/.cache/ms-playwright"
+  fi
+fi
+echo "Resolved browser path: $BROWSER_PATH"
+[ -d "$BROWSER_PATH" ]
+[ -r "$BROWSER_PATH" ]
 
 # 3) 目录内至少有一个浏览器子目录（不包含 .links）
-find /ms-playwright -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
+find "$BROWSER_PATH" -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
 
 # 4) 实际打开网页（HTTP 示例，避免部分环境 HTTPS 证书链问题）
 OUT="$(agent-browser open http://example.com)"
@@ -121,7 +130,7 @@ docker compose run --rm openclaw-cli onboard
 | `npm_config_update_notifier` | false | 关闭 npm 更新提醒，减少日志噪音 |
 | `npm_config_fund` | false | 关闭 npm fund 提示 |
 | `npm_config_audit` | false | 关闭 npm audit（容器运行时无必要） |
-| `PLAYWRIGHT_BROWSERS_PATH` | /ms-playwright | Playwright/agent-browser 浏览器缓存统一路径（root 构建 + node 运行均可见） |
+| `PLAYWRIGHT_BROWSERS_PATH` | （可选） | 手动指定 Playwright/agent-browser 浏览器缓存路径；未设置时通常使用默认缓存目录（如 `$HOME/.cache/ms-playwright`） |
 
 ## 镜像标签
 
