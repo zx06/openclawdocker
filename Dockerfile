@@ -63,6 +63,8 @@ RUN npm install -g \
     @iflow-ai/iflow-cli \
     opencode-ai \
     @github/copilot \
+    clawhub \
+    skills \
     && npm cache clean --force
 
 # Create directories
