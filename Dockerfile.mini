@@ -23,8 +23,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bat \
     git \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && npm install -g openclaw@latest \
+    && apt-get clean
+
+# Use pinned OpenClaw version from .last-openclaw-version
+COPY .last-openclaw-version /tmp/.last-openclaw-version
+RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
+    npm install -g \
+    "openclaw@${OPENCLAW_VERSION}" \
     && npm cache clean --force
 
 # Create directories
