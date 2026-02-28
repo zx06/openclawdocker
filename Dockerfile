@@ -55,9 +55,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fc-cache -fv \
     && apt-get clean
 
+# Use pinned OpenClaw version from .last-openclaw-version
+COPY .last-openclaw-version /tmp/.last-openclaw-version
 # Install Node.js global packages in one layer to improve cache reuse and reduce image size
-RUN npm install -g \
-    openclaw@latest \
+RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
+    npm install -g \
+    "openclaw@${OPENCLAW_VERSION}" \
     agent-browser \
     @larksuiteoapi/node-sdk \
     @iflow-ai/iflow-cli \
