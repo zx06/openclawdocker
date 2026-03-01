@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     htop \
     vim \
+    tmux \
     iputils-ping \
     dnsutils \
     libglib2.0-0 \
@@ -73,6 +74,7 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     @iflow-ai/iflow-cli \
     opencode-ai \
     @github/copilot \
+    @mariozechner/pi-coding-agent \
     clawhub \
     skills \
     && npm cache clean --force
