@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-cjk \
     fonts-wqy-zenhei \
     tini \
+    && update-alternatives --install /usr/bin/fd fd /usr/bin/fdfind 100 \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv \
     && apt-get clean
