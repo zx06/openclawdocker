@@ -6,7 +6,6 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV \
     NODE_ENV=production \
-    npm_config_registry=https://registry.npmmirror.com \
     npm_config_update_notifier=false \
     npm_config_fund=false \
     npm_config_audit=false \
