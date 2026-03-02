@@ -38,6 +38,8 @@ RUN mkdir -p /home/node/.openclaw /home/node/.cache && \
 USER node
 WORKDIR /home/node
 
+RUN openclaw completion --shell bash > .bashrc
+
 VOLUME ["/home/node/.openclaw"]
 
 EXPOSE 18789

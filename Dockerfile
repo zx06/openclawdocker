@@ -87,7 +87,8 @@ RUN mkdir -p /home/node/.openclaw && \
 USER node
 WORKDIR /home/node
 
-RUN agent-browser install --with-deps
+RUN agent-browser install --with-deps && \
+    openclaw completion --shell bash > .bashrc
 
 VOLUME ["/home/node/.openclaw"]
 
