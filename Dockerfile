@@ -77,6 +77,7 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     @github/copilot \
     @mariozechner/pi-coding-agent \
     clawhub \
+    mcporter \
     skills \
     && npm cache clean --force
 
