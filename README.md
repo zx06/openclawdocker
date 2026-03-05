@@ -63,47 +63,6 @@ docker run -d \
 docker run --rm --entrypoint sh ghcr.io/zx06/openclaw:latest -lc "openclaw --help && rg --version && (fd --version || fdfind --version) && (batcat --version || bat --version) && jq --version && git --version"
 ```
 
-## Smoke Test（验证浏览器是否对运行用户可用）
-
-```bash
-docker run --rm --entrypoint bash ghcr.io/zx06/openclaw:latest -lc '
-set -euo pipefail
-
-echo "user=$(whoami)"
-echo "home=$HOME"
-echo "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-<empty>}"
-
-# 1) agent-browser 命令存在
-agent-browser --version
-
-# 2) 解析浏览器目录（优先环境变量；否则兼容 /ms-playwright 与默认缓存目录）
-BROWSER_PATH="${PLAYWRIGHT_BROWSERS_PATH:-}"
-if [ -z "$BROWSER_PATH" ]; then
-  if [ -d /ms-playwright ]; then
-    BROWSER_PATH="/ms-playwright"
-  else
-    BROWSER_PATH="$HOME/.cache/ms-playwright"
-  fi
-fi
-echo "Resolved browser path: $BROWSER_PATH"
-[ -d "$BROWSER_PATH" ]
-[ -r "$BROWSER_PATH" ]
-
-# 3) 目录内至少有一个浏览器子目录（不包含 .links）
-find "$BROWSER_PATH" -mindepth 1 -maxdepth 1 -type d ! -name .links | grep -q .
-
-# 4) 实际打开网页（HTTP 示例，避免部分环境 HTTPS 证书链问题）
-OUT="$(agent-browser open http://example.com)"
-echo "$OUT"
-echo "$OUT" | grep -q "Example Domain"
-
-echo "smoke-test passed: browser binaries are visible and agent-browser can open webpages"
-'
-```
-
-> 如果上面第 3 步失败，通常表示镜像构建阶段浏览器未成功下载（例如网络问题），需要在构建日志中排查 `agent-browser install --with-deps`。
-> 如果第 4 步失败，请优先检查运行环境网络连通性、DNS 与代理配置。
-
 ## 首次配置
 
 容器启动后，运行配置向导：
