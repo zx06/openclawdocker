@@ -77,7 +77,7 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     opencode-ai \
     @github/copilot \
     @mariozechner/pi-coding-agent \
-    pi-tavily-tools
+    pi-tavily-tools \
     clawhub \
     mcporter \
     skills \
