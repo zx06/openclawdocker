@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop \
     vim \
     tmux \
+    nmap \
     iputils-ping \
     dnsutils \
     libglib2.0-0 \
@@ -76,6 +77,7 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     opencode-ai \
     @github/copilot \
     @mariozechner/pi-coding-agent \
+    pi-tavily-tools
     clawhub \
     mcporter \
     skills \
