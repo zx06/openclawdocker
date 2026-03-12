@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt-get update && apt-get install -y --no-install-recommends \
     python3 \
+    python3-pip \
     gh \
     docker.io \
     jq \
