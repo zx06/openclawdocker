@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
     | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
     gh \
     docker.io \
     jq \
@@ -64,6 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -fv \
     && apt-get clean
+RUN pip install tavily-python
 
 # Use pinned OpenClaw version from .last-openclaw-version
 COPY .last-openclaw-version /tmp/.last-openclaw-version
