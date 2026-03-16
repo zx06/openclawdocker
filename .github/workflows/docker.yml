@@ -49,18 +49,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Temporary: full image stays amd64-only until agent-browser supports Linux ARM64 install flow.
           - variant: full
             dockerfile: Dockerfile
             tag_prefix: ""
             cache_scope: full-amd64
             arch: amd64
             runner: ubuntu-latest
-          - variant: full
-            dockerfile: Dockerfile
-            tag_prefix: ""
-            cache_scope: full-arm64
-            arch: arm64
-            runner: ubuntu-24.04-arm
           - variant: mini
             dockerfile: Dockerfile.mini
             tag_prefix: mini-
@@ -155,10 +150,14 @@ jobs:
             tag_prefix: ""
             label: OpenClaw
             description: Pre-built OpenClaw Docker image with agent-browser and Feishu support
+            arches: amd64
+            architectures_label: linux/amd64
           - variant: mini
             tag_prefix: mini-
             label: OpenClaw Mini
             description: Minimal OpenClaw Docker image without agent-browser and browser dependencies
+            arches: "amd64 arm64"
+            architectures_label: linux/amd64, linux/arm64
 
     runs-on: ubuntu-latest
     permissions:
@@ -192,13 +191,14 @@ jobs:
 
           create_manifest() {
             local repo="$1"
-            local sources=(
-              "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-amd64"
-              "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-arm64"
-            )
+            local sources=()
             local tag_args=(
               "-t" "${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}"
             )
+
+            for arch in ${{ matrix.arches }}; do
+              sources+=("${repo}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${arch}")
+            done
 
             if [ "${{ github.ref_name }}" = "master" ]; then
               tag_args+=("-t" "${repo}:${{ matrix.tag_prefix }}latest")
@@ -225,4 +225,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Image | Architectures | GHCR Primary | ACR Primary | GHCR Release Tags | ACR Release Tags | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| ${{ matrix.label }} | linux/amd64, linux/arm64 | \`${GHCR_PRIMARY}\` | \`${ACR_PRIMARY}\` | ${GHCR_RELEASE} | ${ACR_RELEASE} | Pushed |" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ matrix.label }} | ${{ matrix.architectures_label }} | \`${GHCR_PRIMARY}\` | \`${ACR_PRIMARY}\` | ${GHCR_RELEASE} | ${ACR_RELEASE} | Pushed |" >> $GITHUB_STEP_SUMMARY
