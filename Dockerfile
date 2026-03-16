@@ -9,6 +9,7 @@ ENV \
     npm_config_update_notifier=false \
     npm_config_fund=false \
     npm_config_audit=false \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     TZ=Asia/Shanghai
 
 # Install system dependencies
@@ -83,8 +84,8 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     && npm cache clean --force
 
 # Create directories
-RUN mkdir -p /home/node/.openclaw && \
-    chown -R node:node /home/node/.openclaw
+RUN mkdir -p /home/node/.openclaw /ms-playwright && \
+    chown -R node:node /home/node/.openclaw /ms-playwright
 
 USER node
 WORKDIR /home/node
