@@ -35,7 +35,10 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name openclaw-smoke -p 18789:18789 openclaw:smoke
+          # openclaw 2026.10.x refuses bind=auto in containers without auth
+          docker run -d --name openclaw-smoke -p 18789:18789 \
+            -e OPENCLAW_GATEWAY_TOKEN=smoke-test-token \
+            openclaw:smoke
           docker ps --filter "name=openclaw-smoke"
 
       - name: Verify required commands exist (entrypoint override)
