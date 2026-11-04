@@ -109,6 +109,9 @@ jobs:
             ${{ env.ACR_IMAGE_NAME }}:${{ matrix.tag_prefix }}sha-${{ github.sha }}-${{ matrix.arch }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+          # Aliyun ACR rejects OCI empty/provenance attestations from buildx defaults
+          provenance: false
+          sbom: false
 
       - name: Compute native image size
         id: native_size
