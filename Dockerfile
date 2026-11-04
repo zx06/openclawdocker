@@ -39,10 +39,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dnsutils \
     libglib2.0-0 \
     libnss3 \
+    libnss3-tools \
     libnspr4 \
     libdbus-1-3 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
+    libatspi2.0-0 \
     libcups2 \
     libdrm2 \
     libxkbcommon0 \
@@ -52,13 +54,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 \
     libgbm1 \
     libpango-1.0-0 \
+    libpangocairo-1.0-0 \
     libcairo2 \
+    libcairo-gobject2 \
     libasound2 \
     libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcb-shm0 \
     libxext6 \
+    libxcursor1 \
+    libxi6 \
+    libxrender1 \
+    libxshmfence1 \
+    libgtk-3-0 \
+    libgdk-pixbuf-2.0-0 \
+    libfreetype6 \
+    libfontconfig1 \
     ffmpeg \
     libopus0 \
     fonts-noto-cjk \
+    fonts-noto-color-emoji \
+    fonts-freefont-ttf \
     fonts-wqy-zenhei \
     tini \
     && update-alternatives --install /usr/bin/fd fd /usr/bin/fdfind 100 \
@@ -83,14 +100,15 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     skills \
     && npm cache clean --force
 
-# Create directories
-RUN mkdir -p /home/node/.openclaw /ms-playwright && \
-    chown -R node:node /home/node/.openclaw /ms-playwright
+# Create directories (agent-browser cache lives under the runtime user home)
+RUN mkdir -p /home/node/.openclaw /home/node/.agent-browser /ms-playwright && \
+    chown -R node:node /home/node/.openclaw /home/node/.agent-browser /ms-playwright
 
 USER node
 WORKDIR /home/node
 
-RUN agent-browser install --with-deps && \
+# OS browser deps already installed as root via apt; avoid --with-deps (needs apt/sudo)
+RUN agent-browser install && \
     openclaw completion --shell bash > .bashrc
 
 VOLUME ["/home/node/.openclaw"]

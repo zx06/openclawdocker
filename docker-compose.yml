@@ -12,6 +12,8 @@ services:
       - ~/.openclaw/workspace:/home/node/.openclaw/workspace
     environment:
       - NODE_ENV=production
+      # Required by openclaw >=2026.10 when gateway bind=auto in containers
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-changeme}
     healthcheck:
       test: ["CMD-SHELL", "openclaw gateway health >/dev/null 2>&1 || openclaw gateway status >/dev/null 2>&1"]
       interval: 30s
