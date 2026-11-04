@@ -100,18 +100,16 @@ RUN OPENCLAW_VERSION="$(cat /tmp/.last-openclaw-version)" && \
     skills \
     && npm cache clean --force
 
-# Create directories
-RUN mkdir -p /home/node/.openclaw /ms-playwright && \
-    chown -R node:node /home/node/.openclaw /ms-playwright
-
-# Browser OS deps are installed via apt above; install browsers as root then hand off to node
-RUN agent-browser install && \
-    chown -R node:node /ms-playwright
+# Create directories (agent-browser cache lives under the runtime user home)
+RUN mkdir -p /home/node/.openclaw /home/node/.agent-browser /ms-playwright && \
+    chown -R node:node /home/node/.openclaw /home/node/.agent-browser /ms-playwright
 
 USER node
 WORKDIR /home/node
 
-RUN openclaw completion --shell bash > .bashrc
+# OS browser deps already installed as root via apt; avoid --with-deps (needs apt/sudo)
+RUN agent-browser install && \
+    openclaw completion --shell bash > .bashrc
 
 VOLUME ["/home/node/.openclaw"]
 
